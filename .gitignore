@@ -1,0 +1,16 @@
+# Virtual environment
+.venv/
+venv/
+
+# Ignore the environment variable file
+.env
+.env.*
+
+# Testing & Coverage
+.pytest_cache/
+
+# Ignore Python bytecode files
+__pycache__/
+
+# IDE & Editor files
+.vscode/
