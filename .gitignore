@@ -2,15 +2,29 @@
 .venv/
 venv/
 
-# Ignore the environment variable file
+# Environment variables / secrets
 .env
 .env.*
 
+# Local application data / databases
+data/
+*.db
+*.sqlite
+*.sqlite3
+
 # Testing & Coverage
 .pytest_cache/
+.coverage
+htmlcov/
 
-# Ignore Python bytecode files
+# Python cache / bytecode
 __pycache__/
+*.py[cod]
 
 # IDE & Editor files
 .vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
