@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Pace, WorkoutRequest, User, WorkoutResult } from "./types";
+import type { WorkoutRequest, User, WorkoutResult } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
