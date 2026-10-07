@@ -25,6 +25,7 @@ from .core.models import WorkoutMatch, WorkoutRequest
 from .spotify.bpm import GetSongBpmProvider
 from .spotify.client import SpotifyAPIError
 from .spotify.discovery import build_spotify_song_pool
+from .spotify.routes import router as spotify_router
 
 # ==================================================
 # FastAPI Application Setup
@@ -43,7 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
-
+app.include_router(spotify_router)
 
 # ==================================================
 # API Endpoints
