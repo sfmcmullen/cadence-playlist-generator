@@ -82,8 +82,28 @@ function App() {
             });
     }
 
+    // Debugging function to test BPM retrieval functionality
+    function getBpm() {
+        fetch(`${API_URL}/spotify/bpm?q=The Weeknd`, {
+            method: "GET",
+            credentials: "include",
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Search failed");
+                }
+                return response.json();
+            })
+            .then((data) => {
+                console.log("Search results:", data);
+            })
+            .catch((error) => {
+                console.error("Search error:", error);
+            });
+    }
+
     // Function to build a WorkoutRequest from the current form state and send it to the backend API.
-    async function generateWorkout() {
+    async function generatePreviewWorkout() {
         setLoading(true);
         setError(null);
         setResult(null);
@@ -106,7 +126,7 @@ function App() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(workout),
+                body: JSON.stringify({ workout }),
             });
 
             // Handle errors from the API response
@@ -120,6 +140,81 @@ function App() {
             }
 
             // Parse the successful response and update the result state
+            const data: WorkoutResult = await response.json();
+            setResult(data);
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Something went wrong"
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Function to build an actual WorkoutRequest from the current form state and send it to the backend API to generate a workout.
+    async function generateWorkout() {
+        setLoading(true);
+        setError(null);
+        setResult(null);
+
+        try {
+            // Build the WorkoutRequest object from the current form state
+            const workout: WorkoutRequest = {
+                distance_km: distance,
+                pace: {
+                    minutes: paceMinutes,
+                    seconds: paceSeconds,
+                },
+                step_length_m: stepLength,
+            };
+
+            // Log the workout request for debugging
+            console.log("WorkoutRequest:", workout);
+
+            const response = await fetch(
+                `${API_URL}/api/spotify/generate-playlist`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ workout }),
+                }
+            );
+
+            // Handle errors from the API response
+            if (!response.ok) {
+                const errorData = await response.json();
+
+                if (Array.isArray(errorData.detail)) {
+                    const messages = errorData.detail.map(
+                        (error: {
+                            loc?: (string | number)[];
+                            msg?: string;
+                        }) => {
+                            const location = error.loc
+                                ? error.loc.join(".")
+                                : "request";
+
+                            return `${location}: ${
+                                error.msg ?? "Invalid value"
+                            }`;
+                        }
+                    );
+
+                    throw new Error(messages.join("\n"));
+                }
+
+                if (typeof errorData.detail === "string") {
+                    throw new Error(errorData.detail);
+                }
+
+                throw new Error(
+                    `Request failed with status ${response.status}`
+                );
+            }
+
             const data: WorkoutResult = await response.json();
             setResult(data);
         } catch (err) {
@@ -205,6 +300,10 @@ function App() {
                     step={0.1}
                 />
 
+                <button onClick={generatePreviewWorkout} disabled={loading}>
+                    {loading ? "Generating..." : "Generate Preview Workout"}
+                </button>
+
                 <button onClick={generateWorkout} disabled={loading}>
                     {loading ? "Generating..." : "Generate Workout"}
                 </button>
@@ -251,6 +350,11 @@ function App() {
                 {/* debug for spotify search working */}
                 <button onClick={searchSpotfy} disabled={loading}>
                     Search for tracks
+                </button>
+
+                {/* debug for bpm working */}
+                <button onClick={getBpm} disabled={loading}>
+                    Get Bpm
                 </button>
             </section>
 

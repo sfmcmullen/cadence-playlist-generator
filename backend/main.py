@@ -22,7 +22,11 @@ from .core.cadence import build_workout_plan
 from .core.fake_data import build_fake_song_pool
 from .core.matcher import match_playlist_for_workout
 from .core.models import WorkoutMatch, WorkoutRequest
-from .spotify.bpm import GetSongBpmProvider
+from .spotify.bpm import (
+    FallbackBpmProvider,
+    GetSongBpmProvider,
+    ReccoBeatsProvider,
+)
 from .spotify.client import SpotifyAPIError
 from .spotify.discovery import build_spotify_song_pool
 from .spotify.routes import router as spotify_router
@@ -83,14 +87,16 @@ async def generate_spotify_playlist(
     # the user is authenticated with Spotify.
 
     api_key = os.getenv("GETSONGBPM_API_KEY")
-    if not api_key:
-        raise HTTPException(
-            status_code=503,
-            detail="GETSONGBPM_API_KEY is not configured",
-        )
+    # Build the providers in priority order.
+    providers = []
+    # Use GetSongBPM first when a key is configured.
+    if api_key:
+        providers.append(GetSongBpmProvider(api_key))
+    # ReccoBeats is the fallback and doesn't need an API key.
+    providers.append(ReccoBeatsProvider())
+    bpm_provider = FallbackBpmProvider(providers)
 
     spotify = auth.client
-    bpm_provider = GetSongBpmProvider(api_key)
 
     try:
         song_pool = await build_spotify_song_pool(
@@ -98,7 +104,14 @@ async def generate_spotify_playlist(
             bpm_provider,
             genres=genres,
             market=os.getenv("SPOTIFY_MARKET", "GB"),
+            pages_per_genre=10,
         )
+        if not song_pool:
+            raise RuntimeError(
+                "No usable BPM data could be retrieved from "
+                "GetSongBPM or ReccoBeats. Both providers may be "
+                "unavailable, or none of the discovered tracks had BPM data."
+            )
 
         segments = build_workout_plan(workout)
         result = match_playlist_for_workout(segments, song_pool)
