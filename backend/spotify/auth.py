@@ -95,7 +95,11 @@ def authorization_url(
 ) -> str:
     """Generate the Spotify authorization URL for the user to grant access to the application."""
 
-    scopes = ["user-read-private", "playlist-modify-private"]
+    scopes = [
+        "user-read-private",
+        "user-top-read",
+        "playlist-modify-private",
+    ]
     if public_playlists:
         scopes.append("playlist-modify-public")
 
