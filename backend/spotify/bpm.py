@@ -20,6 +20,8 @@ from ..core.models import Track
 
 import logging
 
+import asyncio
+
 GETSONGBPM_BASE_URL = "https://api.getsong.co"
 RECCOBEATS_BASE_URL = "https://api.reccobeats.com/v1"
 
@@ -167,18 +169,40 @@ class ReccoBeatsProvider:
         return track.model_copy(update={"bpm": bpm})
 
     async def _lookup_bpm(self, track: Track) -> float | None:
-        """Request audio features for a Spotify track ID."""
+        """Request audio features for a Spotify track ID, retrying on rate limits."""
 
         url = f"{RECCOBEATS_BASE_URL}/audio-features"
+        max_retries = 3
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.get(
-                url,
-                params={"ids": track.spotify_id},
-            )
+            for attempt in range(max_retries + 1):
+                response = await client.get(
+                    url,
+                    params={"ids": track.spotify_id},
+                )
+
+                if response.status_code != 429 or attempt == max_retries:
+                    break
+
+                retry_after = response.headers.get("Retry-After")
+
+                try:
+                    delay = max(0.0, float(retry_after)) if retry_after else 2.0
+                except ValueError:
+                    delay = 2.0
+
+                logger.warning(
+                    "ReccoBeats rate limit hit for track %r; "
+                    "retrying in %.1f seconds (%d/%d retries)",
+                    track.name,
+                    delay,
+                    attempt + 1,
+                    max_retries,
+                )
+
+                await asyncio.sleep(delay)
 
         # A missing track is not necessarily an API failure.
-        # It may simply not exist in this provider's database.
         if response.status_code == 404:
             return None
 
@@ -189,7 +213,6 @@ class ReccoBeatsProvider:
 
         data = response.json()
 
-        # Usually the endpoint returns one feature object.
         # Handle a content-list response as well.
         if isinstance(data, dict) and isinstance(data.get("content"), list):
             data = next(
