@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from .models import PaceInput, WorkoutRequest, WorkoutSegment
 
-DEFAULT_CADENCE_TOLERANCE = 3
+DEFAULT_CADENCE_TOLERANCE = 5
 
 # ==================================================
 # Helper functions for cadence & bpm calculations
