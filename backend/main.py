@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth.config import get_frontend_url
@@ -79,7 +79,13 @@ async def generate_spotify_playlist(
     workout: WorkoutRequest,
     auth: AuthenticatedSpotify = Depends(get_authenticated_spotify),
     playlist_name: str = "Running Playlist",
-    genres: list[str] | None = None,
+    genres: list[str] | None = Query(default=None),
+    artists: list[str] | None = Query(default=None),
+    search_queries: list[str] | None = Query(default=None),
+    include_user_top_tracks: bool = True,
+    top_tracks_time_range: str = "medium_term",
+    expected_usable_rate: float = 0.40,
+    max_candidates: int = 100,
 ) -> WorkoutMatch:
     """Generate and create a Spotify playlist for the supplied workout."""
 
@@ -96,15 +102,25 @@ async def generate_spotify_playlist(
     providers.append(ReccoBeatsProvider())
     bpm_provider = FallbackBpmProvider(providers)
 
+    # Build the workout plan and calculate the total duration in seconds.
+    segments = build_workout_plan(workout)
+    total_duration_seconds = sum(segment.duration_seconds for segment in segments)
+
     spotify = auth.client
 
     try:
         song_pool = await build_spotify_song_pool(
             spotify,
             bpm_provider,
+            workout_duration_seconds=total_duration_seconds,
             genres=genres,
+            artists=artists,
+            search_queries=search_queries,
+            include_user_top_tracks=include_user_top_tracks,
+            top_tracks_time_range=top_tracks_time_range,
+            expected_usable_rate=expected_usable_rate,
+            max_candidates=max_candidates,
             market=os.getenv("SPOTIFY_MARKET", "GB"),
-            pages_per_genre=10,
         )
         if not song_pool:
             raise RuntimeError(
