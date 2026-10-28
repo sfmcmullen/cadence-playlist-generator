@@ -16,6 +16,10 @@ import httpx
 
 from ..core.models import Track
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 
 # ==================================================
@@ -115,8 +119,88 @@ class SpotifyClient:
             },
         )
 
-        tracks = data.get("tracks", {}).get("items", [])
+        track_data = data.get("tracks", {})
+        tracks = track_data.get("items", [])
+
+        logger.info(
+            "Spotify search query=%r requested_limit=%d offset=%d "
+            "response_limit=%s response_offset=%s total=%s "
+            "next_page=%s returned=%d",
+            query,
+            limit,
+            offset,
+            track_data.get("limit"),
+            track_data.get("offset"),
+            track_data.get("total"),
+            bool(track_data.get("next")),
+            len(tracks),
+        )
+
         return [self._track_from_spotify(item) for item in tracks if item]
+
+    async def get_user_top_tracks(
+        self,
+        *,
+        limit: int = 100,
+        time_range: str = "medium_term",
+    ) -> list[Track]:
+        """Return the current user's top tracks."""
+
+        if time_range not in {
+            "short_term",
+            "medium_term",
+            "long_term",
+        }:
+            raise ValueError("Unsupported Spotify top-tracks time range.")
+
+        limit = min(max(limit, 1), 50)
+
+        data = await self._request(
+            "GET",
+            "/me/top/tracks",
+            params={
+                "limit": limit,
+                "time_range": time_range,
+            },
+        )
+
+        items = data.get("items", [])
+
+        return [
+            self._track_from_spotify(item) for item in items if item and item.get("id")
+        ]
+
+    async def get_user_top_artists(
+        self,
+        *,
+        limit: int = 50,
+        time_range: str = "medium_term",
+    ) -> list[dict[str, Any]]:
+        """Get the current user's top artists."""
+
+        if time_range not in {
+            "short_term",
+            "medium_term",
+            "long_term",
+        }:
+            raise ValueError("Unsupported top-artists time range.")
+
+        limit = min(max(limit, 1), 50)
+
+        data = await self._request(
+            "GET",
+            "/me/top/artists",
+            params={
+                "limit": limit,
+                "time_range": time_range,
+            },
+        )
+
+        return [
+            artist
+            for artist in data.get("items", [])
+            if isinstance(artist, dict) and artist.get("id")
+        ]
 
     async def get_track(self, track_id: str, *, market: str = "GB") -> Track:
         """Get a track by its Spotify ID."""
