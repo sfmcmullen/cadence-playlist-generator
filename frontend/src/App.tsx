@@ -55,15 +55,15 @@ function App() {
             distance: 1,
             paceMinutes: 6,
             paceSeconds: 0,
-            stepLength: 0.78,
+            stepLength: 0.8,
         },
-        { id: 2, distance: 2, paceMinutes: 5, paceSeconds: 0, stepLength: 0.9 },
+        { id: 2, distance: 2, paceMinutes: 5, paceSeconds: 0, stepLength: 0.8 },
         {
             id: 3,
             distance: 1,
             paceMinutes: 6,
             paceSeconds: 30,
-            stepLength: 0.75,
+            stepLength: 0.8,
         },
     ]);
 
