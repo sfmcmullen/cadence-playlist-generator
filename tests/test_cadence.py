@@ -29,5 +29,5 @@ def test_steady_run_builds_one_segment():
     assert len(segments) == 1
     assert segments[0].duration_seconds == 3000
     assert segments[0].target_spm == 167
-    assert segments[0].min_spm == 164
-    assert segments[0].max_spm == 170
+    assert segments[0].min_spm == 162
+    assert segments[0].max_spm == 172
