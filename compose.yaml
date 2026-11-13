@@ -1,0 +1,24 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cadentic-backend
+    env_file:
+      - /opt/cadentic/.env
+    volumes:
+      - /opt/cadentic/data:/app/data
+    ports:
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: https://api-cadentic.sfmcmullen.com
+    container_name: cadentic-frontend
+    ports:
+      - "127.0.0.1:8081:80"
+    restart: unless-stopped
